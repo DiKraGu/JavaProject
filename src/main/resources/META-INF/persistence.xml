@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<persistence version="2.0" xmlns="http://java.sun.com/xml/ns/persistence" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://java.sun.com/xml/ns/persistence 
+http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd ">
+  <persistence-unit name="gestionPU">
+  	<provider>org.hibernate.jpa.HibernatePersistenceProvider</provider>
+  	<properties>
+	  	<property name="hibernate.connection.url" value= "jdbc:mysql://127.0.0.1:3307/gestion_reparation?createDatabaseIfNotExist=true"/>
+	  	<property name="hibernate.connection.user" value="root"/>
+	  	<property name="hibernate.connection.password" value=""/>
+	  	<property name="hibernate.connection.driver_class" value="com.mysql.cj.jdbc.Driver"/>
+	  	<property name="hibernate.show_sql" value="true"/>
+	  	<property name="hibernate.hbm2ddl.auto" value="update"/>
+	  	<property name="hibernate.dialect" value="org.hibernate.dialect.MySQL8Dialect"/>
+	  
+	 	<!-- pour rendre sql plus lisible dans console -->
+	  	<property name="hibernate.format_sql" value="true"/>
+		<property name="hibernate.use_sql_comments" value="true"/>
+
+  	</properties>
+  </persistence-unit>
+</persistence>
