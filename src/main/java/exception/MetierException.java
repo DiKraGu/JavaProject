@@ -1,5 +1,8 @@
 package exception;
 
-public class MetierException {
+public class MetierException extends RuntimeException {
 
+    public MetierException(String message) {
+        super(message);
+    }
 }
