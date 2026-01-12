@@ -10,6 +10,7 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 
 import dao.Boutique;
+import dao.Reparation;
 import dao.Transaction;
 import dao.User;
 import dao.enums.Role;
@@ -25,8 +26,6 @@ public class FrameTransactionsReparateur extends JPanel {
     private final IProprietaire metier = new ProprietaireImpl();
 
     private JComboBox<Boutique> cbBoutiques;
-    private JButton btnChargerReps;
-
     private JComboBox<User> cbReparateurs;
 
     private JTextField txtDebut;
@@ -43,9 +42,9 @@ public class FrameTransactionsReparateur extends JPanel {
     public FrameTransactionsReparateur(User proprietaire) {
         this.proprietaire = proprietaire;
 
-        setLayout(new BorderLayout());
+        setLayout(new BorderLayout(10, 10));
 
-        JLabel titre = new JLabel("Transactions d'un réparateur");
+        JLabel titre = new JLabel("Caisse / Transactions (par réparateur)");
         titre.setHorizontalAlignment(SwingConstants.CENTER);
 
         // ===== TOP =====
@@ -54,9 +53,6 @@ public class FrameTransactionsReparateur extends JPanel {
         top.add(new JLabel("Boutique :"));
         cbBoutiques = new JComboBox<>();
         top.add(cbBoutiques);
-
-        btnChargerReps = new JButton("Charger réparateurs");
-        top.add(btnChargerReps);
 
         top.add(new JLabel("Réparateur :"));
         cbReparateurs = new JComboBox<>();
@@ -104,10 +100,8 @@ public class FrameTransactionsReparateur extends JPanel {
         add(bottom, BorderLayout.SOUTH);
 
         // events
-        btnChargerReps.addActionListener(e -> chargerReparateurs());
-        btnAfficher.addActionListener(e -> afficherTransactions());
-
         cbBoutiques.addActionListener(e -> chargerReparateurs());
+        btnAfficher.addActionListener(e -> afficherTransactions());
 
         // init
         chargerBoutiques();
@@ -117,11 +111,15 @@ public class FrameTransactionsReparateur extends JPanel {
 
     public void refresh() {
         Boutique selectedB = (Boutique) cbBoutiques.getSelectedItem();
+        User selectedR = (User) cbReparateurs.getSelectedItem();
+
         Long idB = (selectedB != null) ? selectedB.getId() : null;
+        Long idR = (selectedR != null) ? selectedR.getId() : null;
 
         chargerBoutiques();
         reselectionnerBoutique(idB);
         chargerReparateurs();
+        reselectionnerReparateur(idR);
 
         model.setRowCount(0);
         lblTotalEntrees.setText("Total entrées : -");
@@ -135,6 +133,17 @@ public class FrameTransactionsReparateur extends JPanel {
             Boutique b = cbBoutiques.getItemAt(i);
             if (b != null && id.equals(b.getId())) {
                 cbBoutiques.setSelectedIndex(i);
+                return;
+            }
+        }
+    }
+
+    private void reselectionnerReparateur(Long id) {
+        if (id == null) return;
+        for (int i = 0; i < cbReparateurs.getItemCount(); i++) {
+            User u = cbReparateurs.getItemAt(i);
+            if (u != null && id.equals(u.getId())) {
+                cbReparateurs.setSelectedIndex(i);
                 return;
             }
         }
@@ -154,8 +163,9 @@ public class FrameTransactionsReparateur extends JPanel {
 
         List<User> reps = metier.listerReparateursParBoutique(b.getId());
         for (User u : reps) {
-            if (u.getRole() == Role.REPARATEUR) cbReparateurs.addItem(u);
+            if (u != null && u.getRole() == Role.REPARATEUR) cbReparateurs.addItem(u);
         }
+
         if (cbReparateurs.getItemCount() > 0) cbReparateurs.setSelectedIndex(0);
     }
 
@@ -170,11 +180,11 @@ public class FrameTransactionsReparateur extends JPanel {
         User rep = (User) cbReparateurs.getSelectedItem();
 
         if (b == null) {
-            JOptionPane.showMessageDialog(this, "Aucune boutique.");
+            JOptionPane.showMessageDialog(this, "Aucune boutique.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
         if (rep == null) {
-            JOptionPane.showMessageDialog(this, "Aucun réparateur pour cette boutique.");
+            JOptionPane.showMessageDialog(this, "Aucun réparateur pour cette boutique.", "Info", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
@@ -193,13 +203,13 @@ public class FrameTransactionsReparateur extends JPanel {
                 model.addRow(new Object[]{
                         t.getDate(),
                         t.getMontant(),
-                        t.getTypeOperation(),
+                        (t.getTypeOperation() != null ? t.getTypeOperation().name() : ""),
                         t.getDescription(),
                         repInfo
                 });
             }
 
-            // totals
+            // totals (par réparateur)
             Double totalE = metier.totalEntrees(rep.getId(), debut, fin);
             Double totalS = metier.totalSorties(rep.getId(), debut, fin);
             Double solde = metier.solde(rep.getId(), debut, fin);
@@ -209,12 +219,17 @@ public class FrameTransactionsReparateur extends JPanel {
             lblSolde.setText("Solde : " + solde);
 
         } catch (java.time.format.DateTimeParseException ex) {
-            JOptionPane.showMessageDialog(this, "Date invalide. Format attendu: yyyy-MM-dd",
+            JOptionPane.showMessageDialog(this,
+                    "Date invalide. Format attendu: yyyy-MM-dd",
                     "Erreur", JOptionPane.ERROR_MESSAGE);
+
         } catch (MetierException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erreur système : " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this,
+                    "Erreur système : " + ex.getMessage(),
+                    "Erreur", JOptionPane.ERROR_MESSAGE);
         }
     }
 }

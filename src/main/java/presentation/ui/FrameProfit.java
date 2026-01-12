@@ -36,9 +36,6 @@ public class FrameProfit extends JPanel {
         this.proprietaire = proprietaire;
         setLayout(new BorderLayout());
 
-        JLabel titre = new JLabel("Profit (par boutique + par réparateur)");
-        titre.setHorizontalAlignment(SwingConstants.CENTER);
-
         // ===== TOP =====
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
         top.add(new JLabel("Boutique :"));
@@ -57,7 +54,7 @@ public class FrameProfit extends JPanel {
         top.add(btnCalculer);
 
         JPanel north = new JPanel(new BorderLayout());
-        north.add(titre, BorderLayout.NORTH);
+       // north.add(titre, BorderLayout.NORTH);
         north.add(top, BorderLayout.SOUTH);
         add(north, BorderLayout.NORTH);
 

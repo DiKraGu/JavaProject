@@ -111,9 +111,6 @@ public class FrameGestionReparateurs extends JPanel {
         txtPourcentage = new JTextField(6);
         l3.add(txtPourcentage);
 
-        JLabel infoPwd = new JLabel("Info : laisser mot de passe vide = ne pas changer.");
-        l3.add(infoPwd);
-
         form.add(l1);
         form.add(l2);
         form.add(l3);
@@ -123,7 +120,7 @@ public class FrameGestionReparateurs extends JPanel {
         // ===== BUTTONS =====
         JPanel buttons = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnAjouter = new JButton("Ajouter");
-        btnModifier = new JButton("Modifier (tout)");
+        btnModifier = new JButton("Modifier");
         btnSupprimer = new JButton("Supprimer");
         btnVider = new JButton("Vider");
 
