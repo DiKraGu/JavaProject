@@ -25,12 +25,10 @@ public class Boutique {
     @Column(nullable = false, unique = true)
     private String numeroPatente;
 
-    // Propriétaire de la boutique
     @ManyToOne
     @JoinColumn(nullable = false)
     private User proprietaire;
 
-    // Liste des réparateurs de cette boutique (facultatif mais pratique)
     @OneToMany(mappedBy = "boutique", fetch = FetchType.LAZY)
     private List<User> reparateurs;
     

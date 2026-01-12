@@ -14,7 +14,6 @@ public class Appareil {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ex: Telephone, PC, Tablette...
     @Column(nullable = false)
     private String type;
 

@@ -28,10 +28,9 @@ public interface IReparateur {
     // ================= REPARATION =================
     Reparation creerReparation(Long idReparateur, Long idClient, Long idBoutique,
                                String descriptionPanne,
-                               List<LigneReparation> lignes); // coutTotal calculé automatiquement
+                               List<LigneReparation> lignes);
 
-    
-    Reparation modifierReparation(Long idReparation, String descriptionPanne); // simple
+    Reparation modifierReparation(Long idReparation, String descriptionPanne);
 
     void supprimerReparation(Long idReparation);
 
@@ -52,13 +51,13 @@ public interface IReparateur {
 
     LigneReparation modifierLigne(Long idLigne, Double coutAppareil, String commentaire);
 
-    // ================= CAISSE (Option C) =================
+    // ================= TRANSACTIONS / CAISSE =================
     Transaction ajouterTransaction(Long idReparateur, Long idReparation, LocalDateTime date,
-                                   Double montant, String typeOperation, String typeCaisse, String description);
+                                   Double montant, String typeOperation, String description);
 
     List<Transaction> listerTransactions(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
 
-    Double soldeTempsReel(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
-
-    Double soldeReparation(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double totalEntrees(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double totalSorties(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double solde(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
 }

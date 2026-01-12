@@ -33,8 +33,9 @@ public class FrameTransactionsReparateur extends JPanel {
     private JTextField txtFin;
     private JButton btnAfficher;
 
-    private JLabel lblSoldeTempsReel;
-    private JLabel lblSoldeReparation;
+    private JLabel lblTotalEntrees;
+    private JLabel lblTotalSorties;
+    private JLabel lblSolde;
 
     private JTable table;
     private DefaultTableModel model;
@@ -80,7 +81,7 @@ public class FrameTransactionsReparateur extends JPanel {
 
         // ===== CENTER =====
         model = new DefaultTableModel(new Object[]{
-                "Date", "Montant", "Type Op", "Type Caisse", "Description", "Réparation"
+                "Date", "Montant", "Type Op", "Description", "Réparation"
         }, 0) {
             private static final long serialVersionUID = 1L;
             @Override public boolean isCellEditable(int r, int c) { return false; }
@@ -90,11 +91,15 @@ public class FrameTransactionsReparateur extends JPanel {
 
         // ===== BOTTOM =====
         JPanel bottom = new JPanel(new FlowLayout(FlowLayout.CENTER));
-        lblSoldeTempsReel = new JLabel("Solde Temps Réel : -");
-        lblSoldeReparation = new JLabel("Solde Réparation : -");
-        bottom.add(lblSoldeTempsReel);
+        lblTotalEntrees = new JLabel("Total entrées : -");
+        lblTotalSorties = new JLabel("Total sorties : -");
+        lblSolde = new JLabel("Solde : -");
+
+        bottom.add(lblTotalEntrees);
         bottom.add(new JLabel("   |   "));
-        bottom.add(lblSoldeReparation);
+        bottom.add(lblTotalSorties);
+        bottom.add(new JLabel("   |   "));
+        bottom.add(lblSolde);
 
         add(bottom, BorderLayout.SOUTH);
 
@@ -102,7 +107,7 @@ public class FrameTransactionsReparateur extends JPanel {
         btnChargerReps.addActionListener(e -> chargerReparateurs());
         btnAfficher.addActionListener(e -> afficherTransactions());
 
-        cbBoutiques.addActionListener(e -> chargerReparateurs()); // pratique : change boutique => recharge réparateurs
+        cbBoutiques.addActionListener(e -> chargerReparateurs());
 
         // init
         chargerBoutiques();
@@ -118,10 +123,10 @@ public class FrameTransactionsReparateur extends JPanel {
         reselectionnerBoutique(idB);
         chargerReparateurs();
 
-        // reset affichage
         model.setRowCount(0);
-        lblSoldeTempsReel.setText("Solde Temps Réel : -");
-        lblSoldeReparation.setText("Solde Réparation : -");
+        lblTotalEntrees.setText("Total entrées : -");
+        lblTotalSorties.setText("Total sorties : -");
+        lblSolde.setText("Solde : -");
     }
 
     private void reselectionnerBoutique(Long id) {
@@ -189,18 +194,19 @@ public class FrameTransactionsReparateur extends JPanel {
                         t.getDate(),
                         t.getMontant(),
                         t.getTypeOperation(),
-                        t.getTypeCaisse(),
                         t.getDescription(),
                         repInfo
                 });
             }
 
-            // soldes
-            Double sTR = metier.soldeTempsReel(rep.getId(), debut, fin);
-            Double sRep = metier.soldeReparation(rep.getId(), debut, fin);
+            // totals
+            Double totalE = metier.totalEntrees(rep.getId(), debut, fin);
+            Double totalS = metier.totalSorties(rep.getId(), debut, fin);
+            Double solde = metier.solde(rep.getId(), debut, fin);
 
-            lblSoldeTempsReel.setText("Solde Temps Réel : " + sTR);
-            lblSoldeReparation.setText("Solde Réparation : " + sRep);
+            lblTotalEntrees.setText("Total entrées : " + totalE);
+            lblTotalSorties.setText("Total sorties : " + totalS);
+            lblSolde.setText("Solde : " + solde);
 
         } catch (java.time.format.DateTimeParseException ex) {
             JOptionPane.showMessageDialog(this, "Date invalide. Format attendu: yyyy-MM-dd",

@@ -11,37 +11,25 @@ public interface IProprietaire {
 
     // ========= Boutiques (CRUD) =========
     Boutique creerBoutique(Boutique b);
-
     Boutique modifierBoutique(Boutique b);
-
     void supprimerBoutique(Long idBoutique);
-
     List<Boutique> listerBoutiquesDuProprietaire(Long idProprietaire);
-
     Boutique getBoutiqueDuProprietaire(Long idProprietaire, Long idBoutique);
 
-    // ========= Réparateurs (CRUD par boutique) =========
+    // ========= Réparateurs =========
     User creerReparateur(User reparateur, Long idBoutique);
-
     List<User> listerReparateursParBoutique(Long idBoutique);
-
-    /**
-     * Modifier tout le réparateur (email/pwd/nom/prenom/tel/%)
-     * + option: changer sa boutique (idBoutique)
-     */
     User modifierReparateur(User reparateur, Long idBoutique);
-
     void supprimerReparateur(Long idReparateur);
 
     // ========= Transactions / soldes =========
     List<Transaction> listerTransactionsReparateur(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
 
-    Double soldeTempsReel(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
-
-    Double soldeReparation(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double totalEntrees(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double totalSorties(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double solde(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
 
     // ========= Profits =========
     Double profitProprietaireParBoutique(Long idBoutique, LocalDateTime debut, LocalDateTime fin);
-
     List<Object[]> profitProprietaireParReparateur(Long idBoutique, LocalDateTime debut, LocalDateTime fin);
 }

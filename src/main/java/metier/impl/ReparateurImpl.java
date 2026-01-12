@@ -6,7 +6,6 @@ import java.util.UUID;
 
 import javax.persistence.EntityManager;
 import javax.persistence.EntityTransaction;
-import javax.persistence.NoResultException;
 import javax.persistence.TypedQuery;
 
 import dao.Appareil;
@@ -18,7 +17,6 @@ import dao.Transaction;
 import dao.User;
 import dao.enums.EtatAppareil;
 import dao.enums.StatutReparation;
-import dao.enums.TypeCaisse;
 import dao.enums.TypeOperation;
 import exception.MetierException;
 import exception.NotFoundException;
@@ -178,6 +176,9 @@ public class ReparateurImpl implements IReparateur {
 
         if (isBlank(descriptionPanne)) throw new MetierException("Description panne obligatoire");
         if (lignes == null || lignes.isEmpty()) throw new MetierException("Ajoutez au moins un appareil");
+        if (idReparateur == null) throw new MetierException("Id réparateur obligatoire");
+        if (idClient == null) throw new MetierException("Id client obligatoire");
+        if (idBoutique == null) throw new MetierException("Id boutique obligatoire");
 
         User reparateur = em.find(User.class, idReparateur);
         if (reparateur == null) throw new NotFoundException("Réparateur introuvable");
@@ -224,9 +225,11 @@ public class ReparateurImpl implements IReparateur {
             em.persist(r);
 
             for (LigneReparation lr : lignes) {
-                // on rattache un appareil MANAGED (important)
+                // rattacher un appareil MANAGED
                 Appareil appManaged = em.find(Appareil.class, lr.getAppareil().getId());
-                if (appManaged == null) throw new NotFoundException("Appareil introuvable (id=" + lr.getAppareil().getId() + ")");
+                if (appManaged == null) {
+                    throw new NotFoundException("Appareil introuvable (id=" + lr.getAppareil().getId() + ")");
+                }
 
                 lr.setReparation(r);
                 lr.setAppareil(appManaged);
@@ -238,7 +241,6 @@ public class ReparateurImpl implements IReparateur {
 
             tr.commit();
 
-            // reload pour récupérer coutTotal final + lignes si besoin
             return rechercherReparation(r.getId());
 
         } catch (Exception e) {
@@ -282,30 +284,50 @@ public class ReparateurImpl implements IReparateur {
         }
     }
 
-    @Override
-    public Reparation changerStatutReparation(Long idReparation, String nouveauStatut) {
-        if (idReparation == null) throw new MetierException("Id réparation obligatoire");
+@Override
+public Reparation changerStatutReparation(Long idReparation, String nouveauStatut) {
+    if (idReparation == null) throw new MetierException("Id réparation obligatoire");
 
-        StatutReparation s;
-        try {
-            s = StatutReparation.valueOf(nouveauStatut);
-        } catch (Exception e) {
-            throw new MetierException("Statut invalide");
-        }
-
-        EntityTransaction tr = em.getTransaction();
-        try {
-            tr.begin();
-            Reparation r = rechercherReparation(idReparation);
-            r.setStatut(s);
-            Reparation res = em.merge(r);
-            tr.commit();
-            return res;
-        } catch (Exception e) {
-            if (tr.isActive()) tr.rollback();
-            throw new MetierException("Erreur changement statut réparation : " + e.getMessage());
-        }
+    StatutReparation nouveau;
+    try {
+        nouveau = StatutReparation.valueOf(nouveauStatut);
+    } catch (Exception e) {
+        throw new MetierException("Statut invalide");
     }
+
+    EntityTransaction tr = em.getTransaction();
+    try {
+        tr.begin();
+
+        Reparation r = rechercherReparation(idReparation);
+
+        StatutReparation ancien = r.getStatut();
+        if (ancien == null) ancien = StatutReparation.EN_COURS;
+
+        // Si rien n'a changé -> rien à faire
+        if (ancien == nouveau) {
+            tr.commit();
+            return r;
+        }
+
+        // MAJ statut
+        r.setStatut(nouveau);
+        Reparation res = em.merge(r);
+
+        // Si on passe à TERMINE => créer automatiquement une transaction ENTREE (paiement)
+        if (nouveau == StatutReparation.TERMINEE) {
+            creerTransactionPaiementSiAbsente(res);
+        }
+
+        tr.commit();
+        return res;
+
+    } catch (Exception e) {
+        if (tr.isActive()) tr.rollback();
+        throw new MetierException("Erreur changement statut réparation : " + e.getMessage());
+    }
+}
+
 
     @Override
     public Reparation rechercherReparation(Long idReparation) {
@@ -459,7 +481,7 @@ public class ReparateurImpl implements IReparateur {
 
     @Override
     public Transaction ajouterTransaction(Long idReparateur, Long idReparation, LocalDateTime date,
-                                         Double montant, String typeOperation, String typeCaisse, String description) {
+                                         Double montant, String typeOperation, String description) {
 
         if (idReparateur == null) throw new MetierException("Id réparateur obligatoire");
         if (montant == null || montant <= 0) throw new MetierException("Montant invalide (>0)");
@@ -474,19 +496,16 @@ public class ReparateurImpl implements IReparateur {
         }
 
         TypeOperation op;
-        TypeCaisse tc;
         try {
             op = TypeOperation.valueOf(typeOperation);
-            tc = TypeCaisse.valueOf(typeCaisse);
         } catch (Exception e) {
-            throw new MetierException("Type opération ou type caisse invalide");
+            throw new MetierException("Type opération invalide");
         }
 
         Transaction t = Transaction.builder()
                 .date(date != null ? date : LocalDateTime.now())
                 .montant(montant)
                 .typeOperation(op)
-                .typeCaisse(tc)
                 .description(description)
                 .reparateur(reparateur)
                 .reparation(rep)
@@ -510,9 +529,9 @@ public class ReparateurImpl implements IReparateur {
         if (debut == null || fin == null) throw new MetierException("Début et fin obligatoires");
 
         TypedQuery<Transaction> q = em.createQuery(
-                "SELECT t FROM Transaction t WHERE t.reparateur.id = :id "
-                        + "AND t.date BETWEEN :d1 AND :d2 "
-                        + "ORDER BY t.date DESC",
+                "SELECT t FROM Transaction t WHERE t.reparateur.id = :id " +
+                        "AND t.date BETWEEN :d1 AND :d2 " +
+                        "ORDER BY t.date DESC",
                 Transaction.class);
 
         q.setParameter("id", idReparateur);
@@ -523,43 +542,41 @@ public class ReparateurImpl implements IReparateur {
     }
 
     @Override
-    public Double soldeTempsReel(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
-        return calculerSolde(idReparateur, TypeCaisse.TEMPS_REEL, debut, fin);
+    public Double totalEntrees(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
+        return sommeMontant(idReparateur, TypeOperation.ENTREE, debut, fin);
     }
 
     @Override
-    public Double soldeReparation(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
-        return calculerSolde(idReparateur, TypeCaisse.REPARATION, debut, fin);
+    public Double totalSorties(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
+        return sommeMontant(idReparateur, TypeOperation.SORTIE, debut, fin);
     }
 
-    // ===================== UTILS =====================
+    @Override
+    public Double solde(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
+        return totalEntrees(idReparateur, debut, fin) - totalSorties(idReparateur, debut, fin);
+    }
 
-    private Double calculerSolde(Long idReparateur, TypeCaisse typeCaisse, LocalDateTime debut, LocalDateTime fin) {
+    private Double sommeMontant(Long idReparateur, TypeOperation op,
+                               LocalDateTime debut, LocalDateTime fin) {
+
         if (idReparateur == null) throw new MetierException("Id réparateur obligatoire");
         if (debut == null || fin == null) throw new MetierException("Début et fin obligatoires");
 
-        Double entree = sommeMontant(idReparateur, typeCaisse, TypeOperation.ENTREE, debut, fin);
-        Double sortie = sommeMontant(idReparateur, typeCaisse, TypeOperation.SORTIE, debut, fin);
-        return entree - sortie;
-    }
-
-    private Double sommeMontant(Long idReparateur, TypeCaisse tc, TypeOperation op,
-                               LocalDateTime debut, LocalDateTime fin) {
-
         TypedQuery<Double> q = em.createQuery(
-                "SELECT COALESCE(SUM(t.montant), 0) FROM Transaction t "
-                        + "WHERE t.reparateur.id = :id AND t.typeCaisse = :tc AND t.typeOperation = :op "
-                        + "AND t.date BETWEEN :d1 AND :d2",
+                "SELECT COALESCE(SUM(t.montant), 0) FROM Transaction t " +
+                        "WHERE t.reparateur.id = :id AND t.typeOperation = :op " +
+                        "AND t.date BETWEEN :d1 AND :d2",
                 Double.class);
 
         q.setParameter("id", idReparateur);
-        q.setParameter("tc", tc);
         q.setParameter("op", op);
         q.setParameter("d1", debut);
         q.setParameter("d2", fin);
 
         return q.getSingleResult();
     }
+
+    // ===================== UTILS =====================
 
     private void recalculerCoutTotal(Long idReparation) {
         TypedQuery<Double> q = em.createQuery(
@@ -574,6 +591,41 @@ public class ReparateurImpl implements IReparateur {
         r.setCoutTotal(total);
         em.merge(r);
     }
+    
+    private void creerTransactionPaiementSiAbsente(Reparation rep) {
+        if (rep == null || rep.getId() == null) throw new MetierException("Réparation invalide");
+
+        // Anti-doublon : existe déjà une ENTREE liée à cette réparation ?
+        Long count = em.createQuery(
+                "SELECT COUNT(t) FROM Transaction t " +
+                "WHERE t.reparation.id = :rid AND t.typeOperation = :op",
+                Long.class)
+            .setParameter("rid", rep.getId())
+            .setParameter("op", TypeOperation.ENTREE)
+            .getSingleResult();
+
+        if (count != null && count > 0) {
+            return; // déjà payé (ou déjà enregistré), on ne recrée pas
+        }
+
+        // Montant = coutTotal de la réparation (si null -> 0 interdit)
+        Double montant = rep.getCoutTotal();
+        if (montant == null || montant <= 0) {
+            throw new MetierException("Impossible d'enregistrer le paiement: coût total invalide");
+        }
+
+        Transaction t = Transaction.builder()
+                .date(LocalDateTime.now())
+                .montant(montant)
+                .typeOperation(TypeOperation.ENTREE)
+                .description("Paiement automatique - Réparation " + rep.getCodeSuivi())
+                .reparateur(rep.getReparateur())
+                .reparation(rep)
+                .build();
+
+        em.persist(t);
+    }
+
 
     private boolean isBlank(String s) {
         return s == null || s.trim().isEmpty();

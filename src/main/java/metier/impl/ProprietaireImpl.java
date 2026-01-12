@@ -13,7 +13,6 @@ import dao.Reparation;
 import dao.Transaction;
 import dao.User;
 import dao.enums.Role;
-import dao.enums.TypeCaisse;
 import dao.enums.TypeOperation;
 import exception.MetierException;
 import exception.NotFoundException;
@@ -262,7 +261,7 @@ public class ProprietaireImpl implements IProprietaire {
         }
     }
 
-    // =================== TRANSACTIONS / SOLDES ===================
+ // =================== TRANSACTIONS / SOLDES ===================
 
     @Override
     public List<Transaction> listerTransactionsReparateur(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
@@ -281,30 +280,27 @@ public class ProprietaireImpl implements IProprietaire {
     }
 
     @Override
-    public Double soldeTempsReel(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
-        return calculerSolde(idReparateur, TypeCaisse.TEMPS_REEL, debut, fin);
+    public Double totalEntrees(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
+        return sommeMontant(idReparateur, TypeOperation.ENTREE, debut, fin);
     }
 
     @Override
-    public Double soldeReparation(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
-        return calculerSolde(idReparateur, TypeCaisse.REPARATION, debut, fin);
+    public Double totalSorties(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
+        return sommeMontant(idReparateur, TypeOperation.SORTIE, debut, fin);
     }
 
-    private Double calculerSolde(Long idReparateur, TypeCaisse typeCaisse, LocalDateTime debut, LocalDateTime fin) {
-        Double entree = sommeMontant(idReparateur, typeCaisse, TypeOperation.ENTREE, debut, fin);
-        Double sortie = sommeMontant(idReparateur, typeCaisse, TypeOperation.SORTIE, debut, fin);
-        return entree - sortie;
+    @Override
+    public Double solde(Long idReparateur, LocalDateTime debut, LocalDateTime fin) {
+        return totalEntrees(idReparateur, debut, fin) - totalSorties(idReparateur, debut, fin);
     }
 
-    private Double sommeMontant(Long idReparateur, TypeCaisse tc, TypeOperation op,
-                               LocalDateTime debut, LocalDateTime fin) {
+    private Double sommeMontant(Long idReparateur, TypeOperation op, LocalDateTime debut, LocalDateTime fin) {
         TypedQuery<Double> q = em.createQuery(
                 "SELECT COALESCE(SUM(t.montant), 0) FROM Transaction t " +
-                        "WHERE t.reparateur.id = :id AND t.typeCaisse = :tc AND t.typeOperation = :op " +
+                        "WHERE t.reparateur.id = :id AND t.typeOperation = :op " +
                         "AND t.date BETWEEN :d1 AND :d2",
                 Double.class);
         q.setParameter("id", idReparateur);
-        q.setParameter("tc", tc);
         q.setParameter("op", op);
         q.setParameter("d1", debut);
         q.setParameter("d2", fin);

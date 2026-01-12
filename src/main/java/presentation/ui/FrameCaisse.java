@@ -13,7 +13,6 @@ import javax.swing.table.DefaultTableModel;
 import dao.Reparation;
 import dao.Transaction;
 import dao.User;
-import dao.enums.TypeCaisse;
 import dao.enums.TypeOperation;
 import exception.MetierException;
 import metier.impl.ReparateurImpl;
@@ -33,14 +32,14 @@ public class FrameCaisse extends JPanel {
     private JSpinner spFin;
 
     private JComboBox<TypeOperation> cbOp;
-    private JComboBox<TypeCaisse> cbCaisse;
     private JComboBox<Reparation> cbReparation;
 
     private JTextField txtMontant;
     private JTextField txtDescription;
 
-    private JTextField txtSoldeTR;
-    private JTextField txtSoldeRep;
+    private JTextField txtTotalEntrees;
+    private JTextField txtTotalSorties;
+    private JTextField txtSolde;
 
     public FrameCaisse(User reparateur) {
         this.reparateur = reparateur;
@@ -65,8 +64,8 @@ public class FrameCaisse extends JPanel {
         spFin.setEditor(new JSpinner.DateEditor(spFin, "yyyy-MM-dd HH:mm"));
         top.add(spFin);
 
-        JButton btnRefresh = new JButton("Rafraîchir");
-        top.add(btnRefresh);
+        JButton btnActualiser = new JButton("Actualiser");
+        top.add(btnActualiser);
 
         add(top, BorderLayout.NORTH);
 
@@ -77,15 +76,16 @@ public class FrameCaisse extends JPanel {
 
         // ===== TABLE =====
         model = new DefaultTableModel(new Object[][] {}, new String[] {
-                "ID", "Date", "Montant", "Opération", "Caisse", "Réparation", "Description"
+                "ID", "Date", "Montant", "Opération", "Réparation", "Description"
         }) {
             private static final long serialVersionUID = 1L;
             @Override public boolean isCellEditable(int r, int c) { return false; }
         };
+
         table = new JTable(model);
         add(new JScrollPane(table), BorderLayout.CENTER);
 
-        // ===== SOUTH (ajout + soldes) =====
+        // ===== SOUTH (ajout + totaux) =====
         JPanel south = new JPanel(new BorderLayout(10, 10));
 
         JPanel addTx = new JPanel(new FlowLayout(FlowLayout.LEFT));
@@ -97,10 +97,6 @@ public class FrameCaisse extends JPanel {
         addTx.add(new JLabel("Opération :"));
         cbOp = new JComboBox<>(TypeOperation.values());
         addTx.add(cbOp);
-
-        addTx.add(new JLabel("Caisse :"));
-        cbCaisse = new JComboBox<>(TypeCaisse.values());
-        addTx.add(cbCaisse);
 
         addTx.add(new JLabel("Réparation :"));
         cbReparation = new JComboBox<>();
@@ -115,30 +111,38 @@ public class FrameCaisse extends JPanel {
         JButton btnAjouter = new JButton("Ajouter transaction");
         addTx.add(btnAjouter);
 
+        JButton btnRefreshReps = new JButton("Actualiser réparations");
+        addTx.add(btnRefreshReps);
+
         south.add(addTx, BorderLayout.NORTH);
 
-        JPanel soldes = new JPanel(new FlowLayout(FlowLayout.LEFT));
-        soldes.add(new JLabel("Solde Temps Réel :"));
-        txtSoldeTR = new JTextField(10);
-        txtSoldeTR.setEditable(false);
-        soldes.add(txtSoldeTR);
+        JPanel totals = new JPanel(new FlowLayout(FlowLayout.LEFT));
 
-        soldes.add(new JLabel("   |   "));
+        totals.add(new JLabel("Total entrées :"));
+        txtTotalEntrees = new JTextField(10);
+        txtTotalEntrees.setEditable(false);
+        totals.add(txtTotalEntrees);
 
-        soldes.add(new JLabel("Solde Réparation :"));
-        txtSoldeRep = new JTextField(10);
-        txtSoldeRep.setEditable(false);
-        soldes.add(txtSoldeRep);
+        totals.add(new JLabel("   |   "));
 
-        JButton btnRefreshReps = new JButton("Rafraîchir réparations");
-        soldes.add(btnRefreshReps);
+        totals.add(new JLabel("Total sorties :"));
+        txtTotalSorties = new JTextField(10);
+        txtTotalSorties.setEditable(false);
+        totals.add(txtTotalSorties);
 
-        south.add(soldes, BorderLayout.SOUTH);
+        totals.add(new JLabel("   |   "));
+
+        totals.add(new JLabel("Solde :"));
+        txtSolde = new JTextField(10);
+        txtSolde.setEditable(false);
+        totals.add(txtSolde);
+
+        south.add(totals, BorderLayout.SOUTH);
 
         add(south, BorderLayout.SOUTH);
 
         // events
-        btnRefresh.addActionListener(e -> refreshAll());
+        btnActualiser.addActionListener(e -> refreshAll());
         btnAjouter.addActionListener(e -> ajouterTransaction());
         btnRefreshReps.addActionListener(e -> refreshReparations());
 
@@ -167,6 +171,7 @@ public class FrameCaisse extends JPanel {
         LocalDateTime debut = toLocalDateTime((Date) spDebut.getValue());
         LocalDateTime fin = toLocalDateTime((Date) spFin.getValue());
 
+        // table
         model.setRowCount(0);
         List<Transaction> txs = metier.listerTransactions(reparateur.getId(), debut, fin);
         for (Transaction t : txs) {
@@ -175,17 +180,19 @@ public class FrameCaisse extends JPanel {
                     t.getDate(),
                     t.getMontant(),
                     t.getTypeOperation() != null ? t.getTypeOperation().name() : "",
-                    t.getTypeCaisse() != null ? t.getTypeCaisse().name() : "",
                     t.getReparation() != null ? t.getReparation().getCodeSuivi() : "",
                     t.getDescription()
             });
         }
 
-        Double soldeTR = metier.soldeTempsReel(reparateur.getId(), debut, fin);
-        Double soldeRep = metier.soldeReparation(reparateur.getId(), debut, fin);
+        // totals
+        Double totalE = metier.totalEntrees(reparateur.getId(), debut, fin);
+        Double totalS = metier.totalSorties(reparateur.getId(), debut, fin);
+        Double solde = metier.solde(reparateur.getId(), debut, fin);
 
-        txtSoldeTR.setText(String.valueOf(soldeTR));
-        txtSoldeRep.setText(String.valueOf(soldeRep));
+        txtTotalEntrees.setText(String.valueOf(totalE));
+        txtTotalSorties.setText(String.valueOf(totalS));
+        txtSolde.setText(String.valueOf(solde));
     }
 
     private void ajouterTransaction() {
@@ -199,11 +206,10 @@ public class FrameCaisse extends JPanel {
             if (montant <= 0) throw new MetierException("Montant doit être > 0");
 
             TypeOperation op = (TypeOperation) cbOp.getSelectedItem();
-            TypeCaisse caisse = (TypeCaisse) cbCaisse.getSelectedItem();
-            if (op == null || caisse == null) throw new MetierException("Type opération / caisse invalide");
+            if (op == null) throw new MetierException("Type opération invalide");
 
             Reparation rep = (Reparation) cbReparation.getSelectedItem();
-            Long idReparation = rep != null ? rep.getId() : null;
+            Long idReparation = (rep != null ? rep.getId() : null);
 
             String desc = txtDescription.getText().trim();
 
@@ -213,7 +219,6 @@ public class FrameCaisse extends JPanel {
                     LocalDateTime.now(),
                     montant,
                     op.name(),
-                    caisse.name(),
                     desc
             );
 

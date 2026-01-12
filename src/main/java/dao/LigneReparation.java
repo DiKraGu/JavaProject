@@ -31,9 +31,7 @@ public class LigneReparation {
     @Column(nullable = false)
     private EtatAppareil etatAppareil;
 
-    // Optionnel (si vous voulez)
     private String commentaire;
 
-    // Optionnel (si vous voulez un coût par appareil)
     private Double coutAppareil;
 }
