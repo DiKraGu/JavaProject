@@ -14,7 +14,6 @@ public class Appareil {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // ex: Telephone, PC, Tablette...
     @Column(nullable = false)
     private String type;
 
@@ -26,4 +25,11 @@ public class Appareil {
 
     private String ram;
     private String stockage;
+    
+    @Override
+    public String toString() {
+        return type + " | " + marque + " | " + modele
+                + (ram != null && !ram.isEmpty() ? " | RAM:" + ram : "")
+                + (stockage != null && !stockage.isEmpty() ? " | " + stockage : "");
+    }
 }

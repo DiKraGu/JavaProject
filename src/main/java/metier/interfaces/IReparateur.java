@@ -11,37 +11,53 @@ import dao.Transaction;
 
 public interface IReparateur {
 
-    // ----- Client -----
+    // ================= CLIENT =================
     Client ajouterClient(Client c);
     Client modifierClient(Client c);
     void supprimerClient(Long idClient);
     Client rechercherClient(Long idClient);
     List<Client> listerClients();
 
-    // ----- Appareil -----
+    // ================= APPAREIL =================
     Appareil ajouterAppareil(Appareil a);
     Appareil modifierAppareil(Appareil a);
     void supprimerAppareil(Long idAppareil);
     Appareil rechercherAppareil(Long idAppareil);
     List<Appareil> listerAppareils();
 
-    // ----- Réparation (avec plusieurs appareils via lignes) -----
+    // ================= REPARATION =================
     Reparation creerReparation(Long idReparateur, Long idClient, Long idBoutique,
-                               String descriptionPanne, Double coutTotal,
+                               String descriptionPanne,
                                List<LigneReparation> lignes);
+
+    Reparation modifierReparation(Long idReparation, String descriptionPanne);
+
+    void supprimerReparation(Long idReparation);
 
     Reparation changerStatutReparation(Long idReparation, String nouveauStatut);
 
     Reparation rechercherReparation(Long idReparation);
+
     List<Reparation> listerReparationsParReparateur(Long idReparateur);
 
-    // ----- Transactions / Caisse (Option C) -----
+    // ================= LIGNES =================
+    List<LigneReparation> listerLignesParReparation(Long idReparation);
+
+    LigneReparation ajouterLigne(Long idReparation, Long idAppareil, Double coutAppareil, String commentaire);
+
+    void supprimerLigne(Long idLigne);
+
+    LigneReparation changerEtatLigne(Long idLigne, String nouvelEtat);
+
+    LigneReparation modifierLigne(Long idLigne, Double coutAppareil, String commentaire);
+
+    // ================= TRANSACTIONS / CAISSE =================
     Transaction ajouterTransaction(Long idReparateur, Long idReparation, LocalDateTime date,
-                                   Double montant, String typeOperation, String typeCaisse, String description);
+                                   Double montant, String typeOperation, String description);
 
     List<Transaction> listerTransactions(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
 
-    Double soldeTempsReel(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
-
-    Double soldeReparation(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double totalEntrees(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double totalSorties(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
+    Double solde(Long idReparateur, LocalDateTime debut, LocalDateTime fin);
 }

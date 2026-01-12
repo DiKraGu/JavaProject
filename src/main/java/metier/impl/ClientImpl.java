@@ -20,8 +20,12 @@ public class ClientImpl implements IClient {
     @Override
     public Reparation suivreReparationParCode(String codeSuivi) throws NotFoundException {
         try {
-            TypedQuery<Reparation> q = em.createQuery(
-                    "SELECT r FROM Reparation r WHERE r.codeSuivi = :code", Reparation.class);
+        	TypedQuery<Reparation> q = em.createQuery(
+        		    "SELECT DISTINCT r FROM Reparation r " +
+        		    "LEFT JOIN FETCH r.lignes lr " +
+        		    "LEFT JOIN FETCH lr.appareil " +
+        		    "WHERE r.codeSuivi = :code", Reparation.class);
+
             q.setParameter("code", codeSuivi);
             return q.getSingleResult();
         } catch (NoResultException e) {

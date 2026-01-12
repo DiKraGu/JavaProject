@@ -3,7 +3,6 @@ package dao;
 import java.time.LocalDateTime;
 import javax.persistence.*;
 
-import dao.enums.TypeCaisse;
 import dao.enums.TypeOperation;
 import lombok.*;
 
@@ -26,11 +25,7 @@ public class Transaction {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private TypeOperation typeOperation; // ENTREE / SORTIE
-
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private TypeCaisse typeCaisse; // TEMPS_REEL / REPARATION
+    private TypeOperation typeOperation;
 
     @Column(length = 500)
     private String description;
@@ -40,7 +35,7 @@ public class Transaction {
     @JoinColumn(nullable = false)
     private User reparateur;
 
-    // Optionnel: transaction liée à une réparation (pour traçabilité)
+    // Optionnel: transaction liée à une réparation (traçabilité)
     @ManyToOne
     private Reparation reparation;
 }

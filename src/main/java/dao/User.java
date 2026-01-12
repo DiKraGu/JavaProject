@@ -41,4 +41,10 @@ public class User {
     // Nullable si PROPRIETAIRE
     @ManyToOne
     private Boutique boutique;
+    
+    @Override
+    public String toString() {
+        return id + " | " + nom + " " + prenom + " (" + role + ")";
+    }
+
 }
