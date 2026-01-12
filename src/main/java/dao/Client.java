@@ -22,4 +22,10 @@ public class Client {
 
     @Column(nullable = false)
     private String telephone;
+    
+    @Override
+    public String toString() {
+        return nom + " " + prenom + " | " + telephone;
+    }
+
 }

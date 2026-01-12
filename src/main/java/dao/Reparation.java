@@ -50,4 +50,10 @@ public class Reparation {
     // Réparation contient plusieurs appareils via LigneReparation
     @OneToMany(mappedBy = "reparation", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     private List<LigneReparation> lignes;
+    
+    @Override
+    public String toString() {
+        return codeSuivi + " | " + (client != null ? (client.getNom() + " " + client.getPrenom()) : "");
+    }
+
 }

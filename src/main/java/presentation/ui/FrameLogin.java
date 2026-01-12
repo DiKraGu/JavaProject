@@ -2,16 +2,11 @@ package presentation.ui;
 
 import java.awt.EventQueue;
 
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPasswordField;
-import javax.swing.JTextField;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 
 import dao.User;
+import dao.enums.Role;
 import exception.AuthException;
 import metier.impl.AuthImpl;
 import metier.interfaces.IAuth;
@@ -22,108 +17,123 @@ public class FrameLogin extends JFrame {
 
     private JPanel contentPane;
     private JTextField txtEmail;
-    private JPasswordField txtPassword;
+    private JPasswordField txtPwd;
 
-    private IAuth authMetier = new AuthImpl();
+    private final IAuth auth = new AuthImpl();
 
-    /**
-     * Launch the application.
-     */
-    public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    FrameLogin frame = new FrameLogin();
-                    frame.setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        });
-    }
-
-    /**
-     * Create the frame.
-     */
     public FrameLogin() {
         setTitle("Connexion");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setBounds(100, 100, 450, 300);
+        setBounds(100, 100, 520, 320);
 
         contentPane = new JPanel();
-        contentPane.setBorder(new EmptyBorder(20, 20, 20, 20));
+        contentPane.setBorder(new EmptyBorder(15, 15, 15, 15));
         setContentPane(contentPane);
         contentPane.setLayout(null);
 
-        // Label Email
+        JLabel lblTitre = new JLabel("Connexion");
+        lblTitre.setHorizontalAlignment(SwingConstants.CENTER);
+        lblTitre.setBounds(10, 10, 484, 25);
+        contentPane.add(lblTitre);
+
         JLabel lblEmail = new JLabel("Email :");
-        lblEmail.setBounds(50, 60, 80, 25);
+        lblEmail.setBounds(30, 60, 80, 20);
         contentPane.add(lblEmail);
 
-        // Champ Email
         txtEmail = new JTextField();
-        txtEmail.setBounds(150, 60, 220, 25);
+        txtEmail.setBounds(120, 58, 330, 26);
         contentPane.add(txtEmail);
-        txtEmail.setColumns(10);
 
-        // Label Mot de passe
-        JLabel lblMdp = new JLabel("Mot de passe :");
-        lblMdp.setBounds(50, 110, 100, 25);
-        contentPane.add(lblMdp);
+        JLabel lblPwd = new JLabel("Mot de passe :");
+        lblPwd.setBounds(30, 105, 100, 20);
+        contentPane.add(lblPwd);
 
-        // Champ Mot de passe
-        txtPassword = new JPasswordField();
-        txtPassword.setBounds(150, 110, 220, 25);
-        contentPane.add(txtPassword);
+        txtPwd = new JPasswordField();
+        txtPwd.setBounds(120, 103, 330, 26);
+        contentPane.add(txtPwd);
 
-        // Bouton Login
         JButton btnLogin = new JButton("Se connecter");
-        btnLogin.setBounds(150, 170, 130, 30);
+        btnLogin.setBounds(120, 155, 160, 32);
         contentPane.add(btnLogin);
 
-        // Bouton Suivi client
-        JButton btnSuivi = new JButton("Suivi client");
-        btnSuivi.setBounds(290, 170, 120, 30);
-        contentPane.add(btnSuivi);
+        JButton btnQuit = new JButton("Quitter");
+        btnQuit.setBounds(290, 155, 160, 32);
+        contentPane.add(btnQuit);
 
-        // Actions
+        // Accès client sans login (suivi par code)
+        JButton btnSuiviClient = new JButton("Suivi client (code)");
+        btnSuiviClient.setBounds(120, 205, 330, 32);
+        contentPane.add(btnSuiviClient);
+
+        btnQuit.addActionListener(e -> System.exit(0));
         btnLogin.addActionListener(e -> seConnecter());
+        btnSuiviClient.addActionListener(e -> ouvrirSuiviClient());
 
-        btnSuivi.addActionListener(e -> {
-            FrameSuiviClient frame = new FrameSuiviClient();
-            frame.setVisible(true);
-        });
+        getRootPane().setDefaultButton(btnLogin);
     }
 
-    /**
-     * Méthode de connexion
-     */
+    private void ouvrirSuiviClient() {
+        try {
+            FrameSuiviClient f = new FrameSuiviClient();
+            f.setVisible(true);
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Erreur UI: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void seConnecter() {
         try {
             String email = txtEmail.getText().trim();
-            String mdp = new String(txtPassword.getPassword());
+            String pwd = new String(txtPwd.getPassword());
 
-            User user = authMetier.seConnecter(email, mdp);
+            if (email.isEmpty() || pwd.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Email et mot de passe obligatoires", "Validation",
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
 
+            User u = auth.seConnecter(email, pwd);
+
+            // ROUTING SELON ROLE
+            if (u.getRole() == null) {
+                JOptionPane.showMessageDialog(this, "Rôle utilisateur non défini", "Erreur",
+                        JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            if (u.getRole() == Role.REPARATEUR) {
+                FrameReparateur fr = new FrameReparateur(u);
+                fr.setVisible(true);
+                dispose();
+                return;
+            }
+
+            if (u.getRole() == Role.PROPRIETAIRE) {
+                FrameProprietaire fp = new FrameProprietaire(u);
+                fp.setVisible(true);
+                dispose();
+                return;
+            }
+
+            // Si tu ajoutes d'autres rôles plus tard
             JOptionPane.showMessageDialog(this,
-                    "Bienvenue " + user.getPrenom(),
-                    "Connexion réussie",
+                    "Rôle non pris en charge dans l'UI : " + u.getRole(),
+                    "Info",
                     JOptionPane.INFORMATION_MESSAGE);
 
-            // Plus tard :
-            // if (user.getRole() == Role.PROPRIETAIRE) { ... }
-            // else { ... }
-
         } catch (AuthException ex) {
-            JOptionPane.showMessageDialog(this,
-                    ex.getMessage(),
-                    "Erreur d'authentification",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this,
-                    "Erreur système : " + ex.getMessage(),
-                    "Erreur",
-                    JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Erreur système: " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
+    }
+
+    // Optionnel : main de test
+    public static void main(String[] args) {
+        EventQueue.invokeLater(() -> {
+            FrameLogin f = new FrameLogin();
+            f.setVisible(true);
+        });
     }
 }

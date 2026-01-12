@@ -26,4 +26,11 @@ public class Appareil {
 
     private String ram;
     private String stockage;
+    
+    @Override
+    public String toString() {
+        return type + " | " + marque + " | " + modele
+                + (ram != null && !ram.isEmpty() ? " | RAM:" + ram : "")
+                + (stockage != null && !stockage.isEmpty() ? " | " + stockage : "");
+    }
 }

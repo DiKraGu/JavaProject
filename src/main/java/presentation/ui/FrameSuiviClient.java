@@ -2,20 +2,14 @@ package presentation.ui;
 
 import java.awt.EventQueue;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
+import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableModel;
 
 import dao.LigneReparation;
 import dao.Reparation;
-import dao.enums.StatutReparation;
 import exception.NotFoundException;
 import metier.impl.ClientImpl;
 import metier.interfaces.IClient;
@@ -26,63 +20,101 @@ public class FrameSuiviClient extends JFrame {
 
     private JPanel contentPane;
     private JTextField txtCode;
-    private JTextArea txtResult;
 
-    private IClient clientMetier = new ClientImpl();
+    private JLabel lblCode;
+    private JLabel lblClient;
+    private JLabel lblDate;
+    private JLabel lblStatut;
+    private JLabel lblCout;
+    private JTextArea txtPanne;
 
-    /**
-     * Launch the application.
-     */
+    private JTable table;
+    private DefaultTableModel model;
+
+    private final IClient clientMetier = new ClientImpl();
+
     public static void main(String[] args) {
-        EventQueue.invokeLater(new Runnable() {
-            public void run() {
-                try {
-                    FrameSuiviClient frame = new FrameSuiviClient();
-                    frame.setVisible(true);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
+        EventQueue.invokeLater(() -> {
+            FrameSuiviClient f = new FrameSuiviClient();
+            f.setVisible(true);
         });
     }
 
-    /**
-     * Create the frame.
-     */
     public FrameSuiviClient() {
-        setTitle("Suivi de réparation");
+        setTitle("Suivi réparation (Client)");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setBounds(100, 100, 700, 450);
+        setBounds(100, 100, 900, 520);
 
         contentPane = new JPanel();
-        contentPane.setBorder(new EmptyBorder(15, 15, 15, 15));
+        contentPane.setBorder(new EmptyBorder(12, 12, 12, 12));
         setContentPane(contentPane);
         contentPane.setLayout(null);
 
-        JLabel lbl = new JLabel("Code de suivi :");
-        lbl.setBounds(20, 20, 120, 25);
+        JLabel title = new JLabel("Suivi de réparation");
+        title.setHorizontalAlignment(SwingConstants.CENTER);
+        title.setBounds(10, 10, 860, 25);
+        contentPane.add(title);
+
+        JLabel lbl = new JLabel("Code suivi :");
+        lbl.setBounds(30, 55, 90, 25);
         contentPane.add(lbl);
 
         txtCode = new JTextField();
-        txtCode.setBounds(140, 20, 300, 25);
+        txtCode.setBounds(120, 55, 220, 25);
         contentPane.add(txtCode);
-        txtCode.setColumns(10);
 
         JButton btnRechercher = new JButton("Rechercher");
-        btnRechercher.setBounds(450, 20, 120, 25);
+        btnRechercher.setBounds(350, 55, 120, 25);
         contentPane.add(btnRechercher);
 
         JButton btnFermer = new JButton("Fermer");
-        btnFermer.setBounds(580, 20, 90, 25);
+        btnFermer.setBounds(770, 55, 100, 25);
         contentPane.add(btnFermer);
 
-        JScrollPane scrollPane = new JScrollPane();
-        scrollPane.setBounds(20, 70, 650, 320);
-        contentPane.add(scrollPane);
+        // Infos réparation
+        lblCode = new JLabel("Code : -");
+        lblCode.setBounds(30, 95, 400, 20);
+        contentPane.add(lblCode);
 
-        txtResult = new JTextArea();
-        txtResult.setEditable(false);
-        scrollPane.setViewportView(txtResult);
+        lblClient = new JLabel("Client : -");
+        lblClient.setBounds(30, 120, 400, 20);
+        contentPane.add(lblClient);
+
+        lblDate = new JLabel("Date : -");
+        lblDate.setBounds(30, 145, 400, 20);
+        contentPane.add(lblDate);
+
+        lblStatut = new JLabel("Statut : -");
+        lblStatut.setBounds(470, 95, 250, 20);
+        contentPane.add(lblStatut);
+
+        lblCout = new JLabel("Coût total : -");
+        lblCout.setBounds(470, 120, 250, 20);
+        contentPane.add(lblCout);
+
+        JLabel lblPanne = new JLabel("Description panne :");
+        lblPanne.setBounds(30, 175, 150, 20);
+        contentPane.add(lblPanne);
+
+        txtPanne = new JTextArea();
+        txtPanne.setLineWrap(true);
+        txtPanne.setWrapStyleWord(true);
+        txtPanne.setEditable(false);
+        JScrollPane spPanne = new JScrollPane(txtPanne);
+        spPanne.setBounds(30, 200, 840, 70);
+        contentPane.add(spPanne);
+
+        // Table lignes
+        model = new DefaultTableModel(
+                new Object[]{"Appareil", "Etat appareil", "Coût appareil", "Commentaire"}, 0) {
+            private static final long serialVersionUID = 1L;
+            @Override public boolean isCellEditable(int row, int col) { return false; }
+        };
+
+        table = new JTable(model);
+        JScrollPane sp = new JScrollPane(table);
+        sp.setBounds(30, 290, 840, 170);
+        contentPane.add(sp);
 
         btnRechercher.addActionListener(e -> rechercher());
         btnFermer.addActionListener(e -> dispose());
@@ -92,98 +124,51 @@ public class FrameSuiviClient extends JFrame {
         try {
             String code = txtCode.getText().trim();
             if (code.isEmpty()) {
-                JOptionPane.showMessageDialog(this,
-                        "Veuillez saisir le code de suivi.",
-                        "Validation",
-                        JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Veuillez saisir le code de suivi.", "Info", JOptionPane.INFORMATION_MESSAGE);
                 return;
             }
 
             Reparation r = clientMetier.suivreReparationParCode(code);
 
-            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+            DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
 
-            StringBuilder sb = new StringBuilder();
-            sb.append("=== RÉPARATION TROUVÉE ===\n");
-            sb.append("Code : ").append(r.getCodeSuivi()).append("\n");
+            lblCode.setText("Code : " + r.getCodeSuivi());
+            lblClient.setText("Client : " + (r.getClient() != null ? (r.getClient().getNom() + " " + r.getClient().getPrenom()) : "-"));
+            lblDate.setText("Date : " + (r.getDateCreation() != null ? r.getDateCreation().format(fmt) : "-"));
+            lblStatut.setText("Statut : " + (r.getStatut() != null ? r.getStatut().name() : "-"));
+            lblCout.setText("Coût total : " + (r.getCoutTotal() != null ? r.getCoutTotal() : 0.0));
 
-            // Statut (version “client-friendly”)
-            sb.append("Statut : ").append(libelleStatut(r.getStatut())).append("\n");
+            txtPanne.setText(r.getDescriptionPanne() != null ? r.getDescriptionPanne() : "");
 
-            sb.append("Coût total : ").append(r.getCoutTotal()).append("\n");
-            sb.append("Date : ").append(r.getDateCreation().format(fmt)).append("\n");
-
-            // Boutique (utile au client)
-            if (r.getBoutique() != null) {
-                sb.append("Boutique : ").append(r.getBoutique().getNom()).append("\n");
-            }
-
-            sb.append("\nDescription panne :\n");
-            sb.append(r.getDescriptionPanne()).append("\n\n");
-
-            // Liste des appareils + état par appareil
-            if (r.getLignes() != null && !r.getLignes().isEmpty()) {
-                sb.append("=== APPAREILS ===\n");
-                for (LigneReparation lr : r.getLignes()) {
-                    sb.append("- ")
-                      .append(lr.getAppareil().getType()).append(" ")
-                      .append(lr.getAppareil().getMarque()).append(" ")
-                      .append(lr.getAppareil().getModele())
-                      .append(" | État : ").append(libelleEtatAppareil(lr.getEtatAppareil().name()))
-                      .append(" | Coût : ").append(lr.getCoutAppareil())
-                      .append("\n");
+            // Remplir lignes
+            model.setRowCount(0);
+            List<LigneReparation> lignes = r.getLignes();
+            if (lignes != null) {
+                for (LigneReparation lr : lignes) {
+                    String app = (lr.getAppareil() != null) ? lr.getAppareil().toString() : "-";
+                    String etat = (lr.getEtatAppareil() != null) ? lr.getEtatAppareil().name() : "-";
+                    Double cout = lr.getCoutAppareil() != null ? lr.getCoutAppareil() : 0.0;
+                    String com = lr.getCommentaire() != null ? lr.getCommentaire() : "";
+                    model.addRow(new Object[]{app, etat, cout, com});
                 }
-            } else {
-                sb.append("Aucun appareil enregistré.\n");
             }
-
-            txtResult.setText(sb.toString());
 
         } catch (NotFoundException ex) {
-            JOptionPane.showMessageDialog(this, ex.getMessage(), "Introuvable", JOptionPane.ERROR_MESSAGE);
-            txtResult.setText("");
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Introuvable", JOptionPane.WARNING_MESSAGE);
+            clearAffichage();
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Erreur système : " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Erreur : " + ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
+            ex.printStackTrace();
         }
     }
 
-    /**
-     * Transforme le statut enum en libellé affichable.
-     * Adapte les libellés si tu veux.
-     */
-    private String libelleStatut(StatutReparation statut) {
-        if (statut == null) return "Inconnu";
-        switch (statut) {
-            case EN_COURS:
-                return "En cours";
-            case TERMINEE:
-                return "Terminée";
-            case ANNULEE:
-                return "Annulée";
-            case RENDUE:
-                return "Rendue";
-            default:
-                return statut.name();
-        }
-    }
-
-    /**
-     * Libellé pour l'état d'un appareil (LigneReparation.etatAppareil).
-     * Si ton enum s'appelle différemment, garde simplement la méthode et adapte les cases.
-     */
-    private String libelleEtatAppareil(String etat) {
-        if (etat == null) return "Inconnu";
-        switch (etat) {
-            case "EN_COURS":
-                return "En cours";
-            case "TERMINEE":
-                return "Terminé";
-            case "ANNULEE":
-                return "Annulé";
-            case "RENDUE":
-                return "Rendu";
-            default:
-                return etat;
-        }
+    private void clearAffichage() {
+        lblCode.setText("Code : -");
+        lblClient.setText("Client : -");
+        lblDate.setText("Date : -");
+        lblStatut.setText("Statut : -");
+        lblCout.setText("Coût total : -");
+        txtPanne.setText("");
+        model.setRowCount(0);
     }
 }

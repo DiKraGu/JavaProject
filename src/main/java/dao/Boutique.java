@@ -33,4 +33,10 @@ public class Boutique {
     // Liste des réparateurs de cette boutique (facultatif mais pratique)
     @OneToMany(mappedBy = "boutique", fetch = FetchType.LAZY)
     private List<User> reparateurs;
+    
+    @Override
+    public String toString() {
+        return id + " | " + nom + " | " + adresse;
+    }
+
 }
