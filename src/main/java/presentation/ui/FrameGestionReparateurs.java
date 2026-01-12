@@ -48,9 +48,6 @@ public class FrameGestionReparateurs extends JPanel {
         this.proprietaire = proprietaire;
         setLayout(new BorderLayout());
 
-        JLabel titre = new JLabel("Gestion des Réparateurs (par Boutique)");
-        titre.setHorizontalAlignment(SwingConstants.CENTER);
-
         // ===== TOP =====
         JPanel top = new JPanel(new FlowLayout(FlowLayout.LEFT));
         top.add(new JLabel("Boutique :"));
@@ -66,7 +63,6 @@ public class FrameGestionReparateurs extends JPanel {
         top.add(btnCharger);
 
         JPanel north = new JPanel(new BorderLayout());
-        north.add(titre, BorderLayout.NORTH);
         north.add(top, BorderLayout.SOUTH);
         add(north, BorderLayout.NORTH);
 
