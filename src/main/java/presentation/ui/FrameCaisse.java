@@ -10,7 +10,6 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.table.DefaultTableModel;
 
-import dao.Reparation;
 import dao.Transaction;
 import dao.User;
 import dao.enums.TypeOperation;
@@ -31,8 +30,8 @@ public class FrameCaisse extends JPanel {
     private JSpinner spDebut;
     private JSpinner spFin;
 
+    // création manuelle = SORTIE uniquement
     private JComboBox<TypeOperation> cbOp;
-    private JComboBox<Reparation> cbReparation;
 
     private JTextField txtMontant;
     private JTextField txtDescription;
@@ -40,6 +39,8 @@ public class FrameCaisse extends JPanel {
     private JTextField txtTotalEntrees;
     private JTextField txtTotalSorties;
     private JTextField txtSolde;
+
+    private Timer autoRefreshTimer;
 
     public FrameCaisse(User reparateur) {
         this.reparateur = reparateur;
@@ -72,7 +73,7 @@ public class FrameCaisse extends JPanel {
         // init dates
         LocalDateTime now = LocalDateTime.now();
         spDebut.setValue(toDate(now.withHour(0).withMinute(0)));
-        spFin.setValue(toDate(now));
+        spFin.setValue(toDate(now)); // sera ensuite MAJ automatiquement
 
         // ===== TABLE =====
         model = new DefaultTableModel(new Object[][] {}, new String[] {
@@ -95,24 +96,16 @@ public class FrameCaisse extends JPanel {
         addTx.add(txtMontant);
 
         addTx.add(new JLabel("Opération :"));
-        cbOp = new JComboBox<>(TypeOperation.values());
+        cbOp = new JComboBox<>(new TypeOperation[] { TypeOperation.SORTIE });
+        cbOp.setEnabled(false);
         addTx.add(cbOp);
 
-        addTx.add(new JLabel("Réparation :"));
-        cbReparation = new JComboBox<>();
-        cbReparation.setPrototypeDisplayValue(new Reparation());
-        cbReparation.setPreferredSize(new java.awt.Dimension(220, 26));
-        addTx.add(cbReparation);
-
         addTx.add(new JLabel("Description :"));
-        txtDescription = new JTextField(18);
+        txtDescription = new JTextField(22);
         addTx.add(txtDescription);
 
-        JButton btnAjouter = new JButton("Ajouter transaction");
+        JButton btnAjouter = new JButton("Ajouter dépense (SORTIE)");
         addTx.add(btnAjouter);
-
-        JButton btnRefreshReps = new JButton("Actualiser réparations");
-        addTx.add(btnRefreshReps);
 
         south.add(addTx, BorderLayout.NORTH);
 
@@ -143,37 +136,43 @@ public class FrameCaisse extends JPanel {
 
         // events
         btnActualiser.addActionListener(e -> refreshAll());
-        btnAjouter.addActionListener(e -> ajouterTransaction());
-        btnRefreshReps.addActionListener(e -> refreshReparations());
+        btnAjouter.addActionListener(e -> ajouterSortie());
 
         // init
-        refresh();
-    }
-
-    public void refresh() {
-        refreshReparations();
         refreshAll();
+        startAutoRefresh();
     }
 
-    private void refreshReparations() {
-        cbReparation.removeAllItems();
-        if (reparateur == null || reparateur.getId() == null) return;
+    /**
+     * Pour FrameReparateur.showCaisse()
+     * On garde simple : un refresh immédiat + timer.
+     */
+    public void refresh() {
+        refreshAll();
+        startAutoRefresh();
+    }
 
-        cbReparation.addItem(null); // "Aucune"
+    private void startAutoRefresh() {
+        if (autoRefreshTimer != null) autoRefreshTimer.stop();
 
-        List<Reparation> reps = metier.listerReparationsParReparateur(reparateur.getId());
-        for (Reparation r : reps) cbReparation.addItem(r);
+        autoRefreshTimer = new Timer(2000, e -> refreshAll()); // 2 sec = plus réactif
+        autoRefreshTimer.setRepeats(true);
+        autoRefreshTimer.start();
     }
 
     private void refreshAll() {
         if (reparateur == null || reparateur.getId() == null) return;
 
-        LocalDateTime debut = toLocalDateTime((Date) spDebut.getValue());
-        LocalDateTime fin = toLocalDateTime((Date) spFin.getValue());
+        // FIX LAG : fin = maintenant (sinon les nouvelles transactions sont hors plage)
+        Date nowDate = new Date();
+        spFin.setValue(nowDate);
 
-        // table
+        LocalDateTime debut = toLocalDateTime((Date) spDebut.getValue());
+        LocalDateTime fin = toLocalDateTime(nowDate);
+
         model.setRowCount(0);
         List<Transaction> txs = metier.listerTransactions(reparateur.getId(), debut, fin);
+
         for (Transaction t : txs) {
             model.addRow(new Object[] {
                     t.getId(),
@@ -185,7 +184,6 @@ public class FrameCaisse extends JPanel {
             });
         }
 
-        // totals
         Double totalE = metier.totalEntrees(reparateur.getId(), debut, fin);
         Double totalS = metier.totalSorties(reparateur.getId(), debut, fin);
         Double solde = metier.solde(reparateur.getId(), debut, fin);
@@ -195,7 +193,7 @@ public class FrameCaisse extends JPanel {
         txtSolde.setText(String.valueOf(solde));
     }
 
-    private void ajouterTransaction() {
+    private void ajouterSortie() {
         try {
             if (reparateur == null || reparateur.getId() == null) {
                 JOptionPane.showMessageDialog(this, "Réparateur invalide.", "Erreur", JOptionPane.ERROR_MESSAGE);
@@ -205,20 +203,15 @@ public class FrameCaisse extends JPanel {
             double montant = parseDouble(txtMontant.getText().trim(), "Montant");
             if (montant <= 0) throw new MetierException("Montant doit être > 0");
 
-            TypeOperation op = (TypeOperation) cbOp.getSelectedItem();
-            if (op == null) throw new MetierException("Type opération invalide");
-
-            Reparation rep = (Reparation) cbReparation.getSelectedItem();
-            Long idReparation = (rep != null ? rep.getId() : null);
-
             String desc = txtDescription.getText().trim();
+            if (desc.isEmpty()) desc = "Dépense";
 
             metier.ajouterTransaction(
                     reparateur.getId(),
-                    idReparation,
+                    null,
                     LocalDateTime.now(),
                     montant,
-                    op.name(),
+                    TypeOperation.SORTIE.name(),
                     desc
             );
 
@@ -226,7 +219,7 @@ public class FrameCaisse extends JPanel {
             txtDescription.setText("");
 
             refreshAll();
-            JOptionPane.showMessageDialog(this, "Transaction ajoutée.", "Succès", JOptionPane.INFORMATION_MESSAGE);
+            JOptionPane.showMessageDialog(this, "Dépense ajoutée (SORTIE).", "Succès", JOptionPane.INFORMATION_MESSAGE);
 
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(), "Erreur", JOptionPane.ERROR_MESSAGE);
